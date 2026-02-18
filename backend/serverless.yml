@@ -7,7 +7,7 @@ provider:
   stage: dev
   websocketsApiRouteSelectionExpression: $request.body.action
   environment:
-    REDIS_URL: rediss://default:AeI0AAIncDI5MzMwMjQ5YzdmZGI0YmFlYTk0YWY3Y2FiOGQwMDk2ZHAyNTc5MDg@large-teal-57908.upstash.io:6379
+    REDIS_URL: ${env:REDIS_URL}
     CONNECTIONS_TABLE: ConnectionsTable
     OPERATIONS_TABLE: OperationsTable
     WS_ENDPOINT:
