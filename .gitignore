@@ -1,11 +1,12 @@
 # Node
 node_modules/
-client/node_modules/
-server/node_modules/
+frontend/node_modules/
+backend/node_modules/
 
 # Serverless
 .serverless/
-server/.serverless/
+backend/.serverless/
+backend/serverless.yml/
 
 # Build
 dist/
