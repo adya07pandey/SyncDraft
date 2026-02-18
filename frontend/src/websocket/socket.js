@@ -1,7 +1,9 @@
 let socket = null;
 
 export const connectSocket = (onMessage, onOpen) => {
-  socket = new WebSocket("wss://6njzkg9tne.execute-api.ap-south-1.amazonaws.com/dev");
+  const WS_URL = import.meta.env.VITE_WS_URL;
+
+  socket = new WebSocket(WS_URL);
 
   socket.onopen = () => {
     console.log("connected");

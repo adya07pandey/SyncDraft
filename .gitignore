@@ -14,8 +14,8 @@ build/
 
 # Env
 .env
-client/.env
-server/.env
+frontend/.env.production
+backend/.env
 
 # Logs
 *.log
