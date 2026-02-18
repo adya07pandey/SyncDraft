@@ -1,0 +1,1759 @@
+{
+  "C:\\Users\\PC-ACER\\Desktop\\RealTime\\server\\serverless.yml": {
+    "versionFramework": "4.32.0",
+    "servicePath": "C:\\Users\\PC-ACER\\Desktop\\RealTime\\server\\serverless.yml",
+    "serviceConfigFileName": "serverless.yml",
+    "service": {
+      "service": "collab-engine",
+      "provider": {
+        "name": "aws",
+        "runtime": "nodejs18.x",
+        "region": "ap-south-1",
+        "stage": "dev",
+        "websocketsApiRouteSelectionExpression": "$request.body.action",
+        "environment": {
+          "REDIS_URL": "rediss://default:AeI0AAIncDI5MzMwMjQ5YzdmZGI0YmFlYTk0YWY3Y2FiOGQwMDk2ZHAyNTc5MDg@large-teal-57908.upstash.io:6379",
+          "CONNECTIONS_TABLE": "ConnectionsTable",
+          "OPERATIONS_TABLE": "OperationsTable",
+          "WS_ENDPOINT": {
+            "Fn::Join": [
+              "",
+              [
+                "https://",
+                {
+                  "Ref": "WebsocketsApi"
+                },
+                ".execute-api.",
+                "ap-south-1",
+                ".amazonaws.com/dev"
+              ]
+            ]
+          },
+          "SNAPSHOT_BUCKET": {
+            "Ref": "SnapshotBucket"
+          }
+        },
+        "iam": {
+          "role": {
+            "statements": [
+              {
+                "Effect": "Allow",
+                "Action": [
+                  "dynamodb:PutItem",
+                  "dynamodb:DeleteItem",
+                  "dynamodb:Query"
+                ],
+                "Resource": "*"
+              },
+              {
+                "Effect": "Allow",
+                "Action": [
+                  "execute-api:ManageConnections"
+                ],
+                "Resource": "*"
+              },
+              {
+                "Effect": "Allow",
+                "Action": [
+                  "s3:PutObject",
+                  "s3:GetObject"
+                ],
+                "Resource": [
+                  {
+                    "Fn::Join": [
+                      "",
+                      [
+                        "arn:aws:s3:::",
+                        {
+                          "Ref": "SnapshotBucket"
+                        },
+                        "/*"
+                      ]
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
+        },
+        "versionFunctions": true,
+        "compiledCloudFormationTemplate": {
+          "AWSTemplateFormatVersion": "2010-09-09",
+          "Description": "The AWS CloudFormation template for this Serverless application",
+          "Resources": {
+            "WebsocketHandlerLogGroup": {
+              "Type": "AWS::Logs::LogGroup",
+              "Properties": {
+                "LogGroupName": "/aws/lambda/collab-engine-dev-websocketHandler"
+              }
+            },
+            "IamRoleLambdaExecution": {
+              "Type": "AWS::IAM::Role",
+              "Properties": {
+                "AssumeRolePolicyDocument": {
+                  "Version": "2012-10-17",
+                  "Statement": [
+                    {
+                      "Effect": "Allow",
+                      "Principal": {
+                        "Service": [
+                          "lambda.amazonaws.com"
+                        ]
+                      },
+                      "Action": [
+                        "sts:AssumeRole"
+                      ]
+                    }
+                  ]
+                },
+                "Policies": [
+                  {
+                    "PolicyName": {
+                      "Fn::Join": [
+                        "-",
+                        [
+                          "collab-engine",
+                          "dev",
+                          "lambda"
+                        ]
+                      ]
+                    },
+                    "PolicyDocument": {
+                      "Version": "2012-10-17",
+                      "Statement": [
+                        {
+                          "Effect": "Allow",
+                          "Action": [
+                            "logs:CreateLogStream",
+                            "logs:CreateLogGroup",
+                            "logs:TagResource"
+                          ],
+                          "Resource": [
+                            {
+                              "Fn::Sub": "arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/collab-engine-dev*:*"
+                            }
+                          ]
+                        },
+                        {
+                          "Effect": "Allow",
+                          "Action": [
+                            "logs:PutLogEvents"
+                          ],
+                          "Resource": [
+                            {
+                              "Fn::Sub": "arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/collab-engine-dev*:*:*"
+                            }
+                          ]
+                        },
+                        {
+                          "Effect": "Allow",
+                          "Action": [
+                            "dynamodb:PutItem",
+                            "dynamodb:DeleteItem",
+                            "dynamodb:Query"
+                          ],
+                          "Resource": "*"
+                        },
+                        {
+                          "Effect": "Allow",
+                          "Action": [
+                            "execute-api:ManageConnections"
+                          ],
+                          "Resource": "*"
+                        },
+                        {
+                          "Effect": "Allow",
+                          "Action": [
+                            "s3:PutObject",
+                            "s3:GetObject"
+                          ],
+                          "Resource": [
+                            {
+                              "Fn::Join": [
+                                "",
+                                [
+                                  "arn:aws:s3:::",
+                                  {
+                                    "Ref": "SnapshotBucket"
+                                  },
+                                  "/*"
+                                ]
+                              ]
+                            }
+                          ]
+                        },
+                        {
+                          "Effect": "Allow",
+                          "Action": [
+                            "execute-api:ManageConnections"
+                          ],
+                          "Resource": [
+                            {
+                              "Fn::Sub": "arn:${AWS::Partition}:execute-api:*:*:*/@connections/*"
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  }
+                ],
+                "Path": "/",
+                "RoleName": {
+                  "Fn::Join": [
+                    "-",
+                    [
+                      "collab-engine",
+                      "dev",
+                      {
+                        "Ref": "AWS::Region"
+                      },
+                      "lambdaRole"
+                    ]
+                  ]
+                }
+              }
+            },
+            "WebsocketHandlerLambdaFunction": {
+              "Type": "AWS::Lambda::Function",
+              "Properties": {
+                "Code": {
+                  "S3Bucket": "serverless-framework-deployments-ap-south-1-46955e6c-d03f",
+                  "S3Key": "serverless/collab-engine/dev/1771452417441-2026-02-18T22:06:57.441Z/collab-engine.zip"
+                },
+                "Handler": "handler.main",
+                "Runtime": "nodejs18.x",
+                "FunctionName": "collab-engine-dev-websocketHandler",
+                "MemorySize": 1024,
+                "Timeout": 6,
+                "Environment": {
+                  "Variables": {
+                    "REDIS_URL": "rediss://default:AeI0AAIncDI5MzMwMjQ5YzdmZGI0YmFlYTk0YWY3Y2FiOGQwMDk2ZHAyNTc5MDg@large-teal-57908.upstash.io:6379",
+                    "CONNECTIONS_TABLE": "ConnectionsTable",
+                    "OPERATIONS_TABLE": "OperationsTable",
+                    "WS_ENDPOINT": {
+                      "Fn::Join": [
+                        "",
+                        [
+                          "https://",
+                          {
+                            "Ref": "WebsocketsApi"
+                          },
+                          ".execute-api.",
+                          "ap-south-1",
+                          ".amazonaws.com/dev"
+                        ]
+                      ]
+                    },
+                    "SNAPSHOT_BUCKET": {
+                      "Ref": "SnapshotBucket"
+                    }
+                  }
+                },
+                "Role": {
+                  "Fn::GetAtt": [
+                    "IamRoleLambdaExecution",
+                    "Arn"
+                  ]
+                }
+              },
+              "DependsOn": [
+                "WebsocketHandlerLogGroup"
+              ]
+            },
+            "WebsocketHandlerLambdaVersionOjLymEZ4Adlyph35WSLFIYIuIplN0jnmLQJ2gG9DA": {
+              "Type": "AWS::Lambda::Version",
+              "DeletionPolicy": "Retain",
+              "Properties": {
+                "FunctionName": {
+                  "Ref": "WebsocketHandlerLambdaFunction"
+                },
+                "CodeSha256": "3W0Wynvltafg7qt/76+qTar1eQJ1k64besq8Cbu9mTY="
+              }
+            },
+            "WebsocketsApi": {
+              "Type": "AWS::ApiGatewayV2::Api",
+              "Properties": {
+                "Name": "dev-collab-engine-websockets",
+                "RouteSelectionExpression": "$request.body.action",
+                "Description": "Serverless Websockets",
+                "ProtocolType": "WEBSOCKET"
+              }
+            },
+            "WebsocketHandlerWebsocketsIntegration": {
+              "Type": "AWS::ApiGatewayV2::Integration",
+              "Properties": {
+                "ApiId": {
+                  "Ref": "WebsocketsApi"
+                },
+                "IntegrationType": "AWS_PROXY",
+                "IntegrationUri": {
+                  "Fn::Join": [
+                    "",
+                    [
+                      "arn:",
+                      {
+                        "Ref": "AWS::Partition"
+                      },
+                      ":apigateway:",
+                      {
+                        "Ref": "AWS::Region"
+                      },
+                      ":lambda:path/2015-03-31/functions/",
+                      {
+                        "Fn::GetAtt": [
+                          "WebsocketHandlerLambdaFunction",
+                          "Arn"
+                        ]
+                      },
+                      "/invocations"
+                    ]
+                  ]
+                }
+              }
+            },
+            "WebsocketHandlerLambdaPermissionWebsockets": {
+              "Type": "AWS::Lambda::Permission",
+              "DependsOn": [
+                "WebsocketsApi",
+                "WebsocketHandlerLambdaFunction"
+              ],
+              "Properties": {
+                "FunctionName": {
+                  "Fn::GetAtt": [
+                    "WebsocketHandlerLambdaFunction",
+                    "Arn"
+                  ]
+                },
+                "Action": "lambda:InvokeFunction",
+                "Principal": "apigateway.amazonaws.com"
+              }
+            },
+            "SconnectWebsocketsRoute": {
+              "Type": "AWS::ApiGatewayV2::Route",
+              "Properties": {
+                "ApiId": {
+                  "Ref": "WebsocketsApi"
+                },
+                "RouteKey": "$connect",
+                "AuthorizationType": "NONE",
+                "Target": {
+                  "Fn::Join": [
+                    "/",
+                    [
+                      "integrations",
+                      {
+                        "Ref": "WebsocketHandlerWebsocketsIntegration"
+                      }
+                    ]
+                  ]
+                }
+              }
+            },
+            "SdisconnectWebsocketsRoute": {
+              "Type": "AWS::ApiGatewayV2::Route",
+              "Properties": {
+                "ApiId": {
+                  "Ref": "WebsocketsApi"
+                },
+                "RouteKey": "$disconnect",
+                "AuthorizationType": "NONE",
+                "Target": {
+                  "Fn::Join": [
+                    "/",
+                    [
+                      "integrations",
+                      {
+                        "Ref": "WebsocketHandlerWebsocketsIntegration"
+                      }
+                    ]
+                  ]
+                }
+              }
+            },
+            "JOINUnderscoreDOCWebsocketsRoute": {
+              "Type": "AWS::ApiGatewayV2::Route",
+              "Properties": {
+                "ApiId": {
+                  "Ref": "WebsocketsApi"
+                },
+                "RouteKey": "JOIN_DOC",
+                "AuthorizationType": "NONE",
+                "Target": {
+                  "Fn::Join": [
+                    "/",
+                    [
+                      "integrations",
+                      {
+                        "Ref": "WebsocketHandlerWebsocketsIntegration"
+                      }
+                    ]
+                  ]
+                }
+              }
+            },
+            "SENDUnderscoreOPWebsocketsRoute": {
+              "Type": "AWS::ApiGatewayV2::Route",
+              "Properties": {
+                "ApiId": {
+                  "Ref": "WebsocketsApi"
+                },
+                "RouteKey": "SEND_OP",
+                "AuthorizationType": "NONE",
+                "Target": {
+                  "Fn::Join": [
+                    "/",
+                    [
+                      "integrations",
+                      {
+                        "Ref": "WebsocketHandlerWebsocketsIntegration"
+                      }
+                    ]
+                  ]
+                }
+              }
+            },
+            "SYNCUnderscoreSTATEWebsocketsRoute": {
+              "Type": "AWS::ApiGatewayV2::Route",
+              "Properties": {
+                "ApiId": {
+                  "Ref": "WebsocketsApi"
+                },
+                "RouteKey": "SYNC_STATE",
+                "AuthorizationType": "NONE",
+                "Target": {
+                  "Fn::Join": [
+                    "/",
+                    [
+                      "integrations",
+                      {
+                        "Ref": "WebsocketHandlerWebsocketsIntegration"
+                      }
+                    ]
+                  ]
+                }
+              }
+            },
+            "WebsocketsDeploymentStage": {
+              "Type": "AWS::ApiGatewayV2::Stage",
+              "Properties": {
+                "ApiId": {
+                  "Ref": "WebsocketsApi"
+                },
+                "StageName": "dev",
+                "Description": "Serverless Websockets",
+                "DeploymentId": {
+                  "Ref": "WebsocketsDeploymentatnctbulJHIySAfRL4Joi6PJJiw4bfWUyoGOFTzt8"
+                }
+              }
+            },
+            "WebsocketsDeploymentatnctbulJHIySAfRL4Joi6PJJiw4bfWUyoGOFTzt8": {
+              "Type": "AWS::ApiGatewayV2::Deployment",
+              "DependsOn": [
+                "SconnectWebsocketsRoute",
+                "SdisconnectWebsocketsRoute",
+                "JOINUnderscoreDOCWebsocketsRoute",
+                "SENDUnderscoreOPWebsocketsRoute",
+                "SYNCUnderscoreSTATEWebsocketsRoute"
+              ],
+              "Properties": {
+                "ApiId": {
+                  "Ref": "WebsocketsApi"
+                },
+                "Description": "Serverless Websockets"
+              }
+            },
+            "ConnectionsTable": {
+              "Type": "AWS::DynamoDB::Table",
+              "Properties": {
+                "TableName": "ConnectionsTable",
+                "AttributeDefinitions": [
+                  {
+                    "AttributeName": "connectionId",
+                    "AttributeType": "S"
+                  }
+                ],
+                "KeySchema": [
+                  {
+                    "AttributeName": "connectionId",
+                    "KeyType": "HASH"
+                  }
+                ],
+                "BillingMode": "PAY_PER_REQUEST"
+              }
+            },
+            "OperationsTable": {
+              "Type": "AWS::DynamoDB::Table",
+              "Properties": {
+                "TableName": "OperationsTable",
+                "AttributeDefinitions": [
+                  {
+                    "AttributeName": "docId",
+                    "AttributeType": "S"
+                  },
+                  {
+                    "AttributeName": "syncIndex",
+                    "AttributeType": "N"
+                  }
+                ],
+                "KeySchema": [
+                  {
+                    "AttributeName": "docId",
+                    "KeyType": "HASH"
+                  },
+                  {
+                    "AttributeName": "syncIndex",
+                    "KeyType": "RANGE"
+                  }
+                ],
+                "BillingMode": "PAY_PER_REQUEST",
+                "TimeToLiveSpecification": {
+                  "AttributeName": "ttl",
+                  "Enabled": true
+                }
+              }
+            },
+            "SnapshotBucket": {
+              "Type": "AWS::S3::Bucket",
+              "Properties": {
+                "BucketName": "collab-engine-snapshots-dev"
+              }
+            }
+          },
+          "Outputs": {
+            "ServerlessDeploymentBucketName": {
+              "Value": "serverless-framework-deployments-ap-south-1-46955e6c-d03f",
+              "Export": {
+                "Name": "sls-collab-engine-dev-ServerlessDeploymentBucketName"
+              }
+            },
+            "WebsocketHandlerLambdaFunctionQualifiedArn": {
+              "Description": "Current Lambda function version",
+              "Value": {
+                "Ref": "WebsocketHandlerLambdaVersionOjLymEZ4Adlyph35WSLFIYIuIplN0jnmLQJ2gG9DA"
+              },
+              "Export": {
+                "Name": "sls-collab-engine-dev-WebsocketHandlerLambdaFunctionQualifiedArn"
+              }
+            },
+            "ServiceEndpointWebsocket": {
+              "Description": "URL of the service endpoint",
+              "Value": {
+                "Fn::Join": [
+                  "",
+                  [
+                    "wss://",
+                    {
+                      "Ref": "WebsocketsApi"
+                    },
+                    ".execute-api.",
+                    {
+                      "Ref": "AWS::Region"
+                    },
+                    ".",
+                    {
+                      "Ref": "AWS::URLSuffix"
+                    },
+                    "/dev"
+                  ]
+                ]
+              },
+              "Export": {
+                "Name": "sls-collab-engine-dev-ServiceEndpointWebsocket"
+              }
+            }
+          }
+        },
+        "vpc": {}
+      },
+      "functions": {
+        "websocketHandler": {
+          "handler": "handler.main",
+          "events": [
+            {
+              "websocket": {
+                "route": "$connect"
+              }
+            },
+            {
+              "websocket": {
+                "route": "$disconnect"
+              }
+            },
+            {
+              "websocket": {
+                "route": "JOIN_DOC"
+              }
+            },
+            {
+              "websocket": {
+                "route": "SEND_OP"
+              }
+            },
+            {
+              "websocket": {
+                "route": "SYNC_STATE"
+              }
+            }
+          ],
+          "name": "collab-engine-dev-websocketHandler",
+          "package": {},
+          "memory": 1024,
+          "timeout": 6,
+          "runtime": "nodejs18.x",
+          "vpc": {},
+          "versionLogicalId": "WebsocketHandlerLambdaVersionOjLymEZ4Adlyph35WSLFIYIuIplN0jnmLQJ2gG9DA"
+        }
+      },
+      "resources": {
+        "Resources": {
+          "ConnectionsTable": {
+            "Type": "AWS::DynamoDB::Table",
+            "Properties": {
+              "TableName": "ConnectionsTable",
+              "AttributeDefinitions": [
+                {
+                  "AttributeName": "connectionId",
+                  "AttributeType": "S"
+                }
+              ],
+              "KeySchema": [
+                {
+                  "AttributeName": "connectionId",
+                  "KeyType": "HASH"
+                }
+              ],
+              "BillingMode": "PAY_PER_REQUEST"
+            }
+          },
+          "OperationsTable": {
+            "Type": "AWS::DynamoDB::Table",
+            "Properties": {
+              "TableName": "OperationsTable",
+              "AttributeDefinitions": [
+                {
+                  "AttributeName": "docId",
+                  "AttributeType": "S"
+                },
+                {
+                  "AttributeName": "syncIndex",
+                  "AttributeType": "N"
+                }
+              ],
+              "KeySchema": [
+                {
+                  "AttributeName": "docId",
+                  "KeyType": "HASH"
+                },
+                {
+                  "AttributeName": "syncIndex",
+                  "KeyType": "RANGE"
+                }
+              ],
+              "BillingMode": "PAY_PER_REQUEST",
+              "TimeToLiveSpecification": {
+                "AttributeName": "ttl",
+                "Enabled": true
+              }
+            }
+          },
+          "SnapshotBucket": {
+            "Type": "AWS::S3::Bucket",
+            "Properties": {
+              "BucketName": "collab-engine-snapshots-dev"
+            }
+          }
+        },
+        "Outputs": {}
+      }
+    },
+    "provider": {
+      "name": "aws",
+      "runtime": "nodejs18.x",
+      "region": "ap-south-1",
+      "stage": "dev",
+      "websocketsApiRouteSelectionExpression": "$request.body.action",
+      "environment": {
+        "REDIS_URL": "rediss://default:AeI0AAIncDI5MzMwMjQ5YzdmZGI0YmFlYTk0YWY3Y2FiOGQwMDk2ZHAyNTc5MDg@large-teal-57908.upstash.io:6379",
+        "CONNECTIONS_TABLE": "ConnectionsTable",
+        "OPERATIONS_TABLE": "OperationsTable",
+        "WS_ENDPOINT": {
+          "Fn::Join": [
+            "",
+            [
+              "https://",
+              {
+                "Ref": "WebsocketsApi"
+              },
+              ".execute-api.",
+              "ap-south-1",
+              ".amazonaws.com/dev"
+            ]
+          ]
+        },
+        "SNAPSHOT_BUCKET": {
+          "Ref": "SnapshotBucket"
+        }
+      },
+      "iam": {
+        "role": {
+          "statements": [
+            {
+              "Effect": "Allow",
+              "Action": [
+                "dynamodb:PutItem",
+                "dynamodb:DeleteItem",
+                "dynamodb:Query"
+              ],
+              "Resource": "*"
+            },
+            {
+              "Effect": "Allow",
+              "Action": [
+                "execute-api:ManageConnections"
+              ],
+              "Resource": "*"
+            },
+            {
+              "Effect": "Allow",
+              "Action": [
+                "s3:PutObject",
+                "s3:GetObject"
+              ],
+              "Resource": [
+                {
+                  "Fn::Join": [
+                    "",
+                    [
+                      "arn:aws:s3:::",
+                      {
+                        "Ref": "SnapshotBucket"
+                      },
+                      "/*"
+                    ]
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      },
+      "versionFunctions": true,
+      "compiledCloudFormationTemplate": {
+        "AWSTemplateFormatVersion": "2010-09-09",
+        "Description": "The AWS CloudFormation template for this Serverless application",
+        "Resources": {
+          "WebsocketHandlerLogGroup": {
+            "Type": "AWS::Logs::LogGroup",
+            "Properties": {
+              "LogGroupName": "/aws/lambda/collab-engine-dev-websocketHandler"
+            }
+          },
+          "IamRoleLambdaExecution": {
+            "Type": "AWS::IAM::Role",
+            "Properties": {
+              "AssumeRolePolicyDocument": {
+                "Version": "2012-10-17",
+                "Statement": [
+                  {
+                    "Effect": "Allow",
+                    "Principal": {
+                      "Service": [
+                        "lambda.amazonaws.com"
+                      ]
+                    },
+                    "Action": [
+                      "sts:AssumeRole"
+                    ]
+                  }
+                ]
+              },
+              "Policies": [
+                {
+                  "PolicyName": {
+                    "Fn::Join": [
+                      "-",
+                      [
+                        "collab-engine",
+                        "dev",
+                        "lambda"
+                      ]
+                    ]
+                  },
+                  "PolicyDocument": {
+                    "Version": "2012-10-17",
+                    "Statement": [
+                      {
+                        "Effect": "Allow",
+                        "Action": [
+                          "logs:CreateLogStream",
+                          "logs:CreateLogGroup",
+                          "logs:TagResource"
+                        ],
+                        "Resource": [
+                          {
+                            "Fn::Sub": "arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/collab-engine-dev*:*"
+                          }
+                        ]
+                      },
+                      {
+                        "Effect": "Allow",
+                        "Action": [
+                          "logs:PutLogEvents"
+                        ],
+                        "Resource": [
+                          {
+                            "Fn::Sub": "arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/collab-engine-dev*:*:*"
+                          }
+                        ]
+                      },
+                      {
+                        "Effect": "Allow",
+                        "Action": [
+                          "dynamodb:PutItem",
+                          "dynamodb:DeleteItem",
+                          "dynamodb:Query"
+                        ],
+                        "Resource": "*"
+                      },
+                      {
+                        "Effect": "Allow",
+                        "Action": [
+                          "execute-api:ManageConnections"
+                        ],
+                        "Resource": "*"
+                      },
+                      {
+                        "Effect": "Allow",
+                        "Action": [
+                          "s3:PutObject",
+                          "s3:GetObject"
+                        ],
+                        "Resource": [
+                          {
+                            "Fn::Join": [
+                              "",
+                              [
+                                "arn:aws:s3:::",
+                                {
+                                  "Ref": "SnapshotBucket"
+                                },
+                                "/*"
+                              ]
+                            ]
+                          }
+                        ]
+                      },
+                      {
+                        "Effect": "Allow",
+                        "Action": [
+                          "execute-api:ManageConnections"
+                        ],
+                        "Resource": [
+                          {
+                            "Fn::Sub": "arn:${AWS::Partition}:execute-api:*:*:*/@connections/*"
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                }
+              ],
+              "Path": "/",
+              "RoleName": {
+                "Fn::Join": [
+                  "-",
+                  [
+                    "collab-engine",
+                    "dev",
+                    {
+                      "Ref": "AWS::Region"
+                    },
+                    "lambdaRole"
+                  ]
+                ]
+              }
+            }
+          },
+          "WebsocketHandlerLambdaFunction": {
+            "Type": "AWS::Lambda::Function",
+            "Properties": {
+              "Code": {
+                "S3Bucket": "serverless-framework-deployments-ap-south-1-46955e6c-d03f",
+                "S3Key": "serverless/collab-engine/dev/1771452417441-2026-02-18T22:06:57.441Z/collab-engine.zip"
+              },
+              "Handler": "handler.main",
+              "Runtime": "nodejs18.x",
+              "FunctionName": "collab-engine-dev-websocketHandler",
+              "MemorySize": 1024,
+              "Timeout": 6,
+              "Environment": {
+                "Variables": {
+                  "REDIS_URL": "rediss://default:AeI0AAIncDI5MzMwMjQ5YzdmZGI0YmFlYTk0YWY3Y2FiOGQwMDk2ZHAyNTc5MDg@large-teal-57908.upstash.io:6379",
+                  "CONNECTIONS_TABLE": "ConnectionsTable",
+                  "OPERATIONS_TABLE": "OperationsTable",
+                  "WS_ENDPOINT": {
+                    "Fn::Join": [
+                      "",
+                      [
+                        "https://",
+                        {
+                          "Ref": "WebsocketsApi"
+                        },
+                        ".execute-api.",
+                        "ap-south-1",
+                        ".amazonaws.com/dev"
+                      ]
+                    ]
+                  },
+                  "SNAPSHOT_BUCKET": {
+                    "Ref": "SnapshotBucket"
+                  }
+                }
+              },
+              "Role": {
+                "Fn::GetAtt": [
+                  "IamRoleLambdaExecution",
+                  "Arn"
+                ]
+              }
+            },
+            "DependsOn": [
+              "WebsocketHandlerLogGroup"
+            ]
+          },
+          "WebsocketHandlerLambdaVersionOjLymEZ4Adlyph35WSLFIYIuIplN0jnmLQJ2gG9DA": {
+            "Type": "AWS::Lambda::Version",
+            "DeletionPolicy": "Retain",
+            "Properties": {
+              "FunctionName": {
+                "Ref": "WebsocketHandlerLambdaFunction"
+              },
+              "CodeSha256": "3W0Wynvltafg7qt/76+qTar1eQJ1k64besq8Cbu9mTY="
+            }
+          },
+          "WebsocketsApi": {
+            "Type": "AWS::ApiGatewayV2::Api",
+            "Properties": {
+              "Name": "dev-collab-engine-websockets",
+              "RouteSelectionExpression": "$request.body.action",
+              "Description": "Serverless Websockets",
+              "ProtocolType": "WEBSOCKET"
+            }
+          },
+          "WebsocketHandlerWebsocketsIntegration": {
+            "Type": "AWS::ApiGatewayV2::Integration",
+            "Properties": {
+              "ApiId": {
+                "Ref": "WebsocketsApi"
+              },
+              "IntegrationType": "AWS_PROXY",
+              "IntegrationUri": {
+                "Fn::Join": [
+                  "",
+                  [
+                    "arn:",
+                    {
+                      "Ref": "AWS::Partition"
+                    },
+                    ":apigateway:",
+                    {
+                      "Ref": "AWS::Region"
+                    },
+                    ":lambda:path/2015-03-31/functions/",
+                    {
+                      "Fn::GetAtt": [
+                        "WebsocketHandlerLambdaFunction",
+                        "Arn"
+                      ]
+                    },
+                    "/invocations"
+                  ]
+                ]
+              }
+            }
+          },
+          "WebsocketHandlerLambdaPermissionWebsockets": {
+            "Type": "AWS::Lambda::Permission",
+            "DependsOn": [
+              "WebsocketsApi",
+              "WebsocketHandlerLambdaFunction"
+            ],
+            "Properties": {
+              "FunctionName": {
+                "Fn::GetAtt": [
+                  "WebsocketHandlerLambdaFunction",
+                  "Arn"
+                ]
+              },
+              "Action": "lambda:InvokeFunction",
+              "Principal": "apigateway.amazonaws.com"
+            }
+          },
+          "SconnectWebsocketsRoute": {
+            "Type": "AWS::ApiGatewayV2::Route",
+            "Properties": {
+              "ApiId": {
+                "Ref": "WebsocketsApi"
+              },
+              "RouteKey": "$connect",
+              "AuthorizationType": "NONE",
+              "Target": {
+                "Fn::Join": [
+                  "/",
+                  [
+                    "integrations",
+                    {
+                      "Ref": "WebsocketHandlerWebsocketsIntegration"
+                    }
+                  ]
+                ]
+              }
+            }
+          },
+          "SdisconnectWebsocketsRoute": {
+            "Type": "AWS::ApiGatewayV2::Route",
+            "Properties": {
+              "ApiId": {
+                "Ref": "WebsocketsApi"
+              },
+              "RouteKey": "$disconnect",
+              "AuthorizationType": "NONE",
+              "Target": {
+                "Fn::Join": [
+                  "/",
+                  [
+                    "integrations",
+                    {
+                      "Ref": "WebsocketHandlerWebsocketsIntegration"
+                    }
+                  ]
+                ]
+              }
+            }
+          },
+          "JOINUnderscoreDOCWebsocketsRoute": {
+            "Type": "AWS::ApiGatewayV2::Route",
+            "Properties": {
+              "ApiId": {
+                "Ref": "WebsocketsApi"
+              },
+              "RouteKey": "JOIN_DOC",
+              "AuthorizationType": "NONE",
+              "Target": {
+                "Fn::Join": [
+                  "/",
+                  [
+                    "integrations",
+                    {
+                      "Ref": "WebsocketHandlerWebsocketsIntegration"
+                    }
+                  ]
+                ]
+              }
+            }
+          },
+          "SENDUnderscoreOPWebsocketsRoute": {
+            "Type": "AWS::ApiGatewayV2::Route",
+            "Properties": {
+              "ApiId": {
+                "Ref": "WebsocketsApi"
+              },
+              "RouteKey": "SEND_OP",
+              "AuthorizationType": "NONE",
+              "Target": {
+                "Fn::Join": [
+                  "/",
+                  [
+                    "integrations",
+                    {
+                      "Ref": "WebsocketHandlerWebsocketsIntegration"
+                    }
+                  ]
+                ]
+              }
+            }
+          },
+          "SYNCUnderscoreSTATEWebsocketsRoute": {
+            "Type": "AWS::ApiGatewayV2::Route",
+            "Properties": {
+              "ApiId": {
+                "Ref": "WebsocketsApi"
+              },
+              "RouteKey": "SYNC_STATE",
+              "AuthorizationType": "NONE",
+              "Target": {
+                "Fn::Join": [
+                  "/",
+                  [
+                    "integrations",
+                    {
+                      "Ref": "WebsocketHandlerWebsocketsIntegration"
+                    }
+                  ]
+                ]
+              }
+            }
+          },
+          "WebsocketsDeploymentStage": {
+            "Type": "AWS::ApiGatewayV2::Stage",
+            "Properties": {
+              "ApiId": {
+                "Ref": "WebsocketsApi"
+              },
+              "StageName": "dev",
+              "Description": "Serverless Websockets",
+              "DeploymentId": {
+                "Ref": "WebsocketsDeploymentatnctbulJHIySAfRL4Joi6PJJiw4bfWUyoGOFTzt8"
+              }
+            }
+          },
+          "WebsocketsDeploymentatnctbulJHIySAfRL4Joi6PJJiw4bfWUyoGOFTzt8": {
+            "Type": "AWS::ApiGatewayV2::Deployment",
+            "DependsOn": [
+              "SconnectWebsocketsRoute",
+              "SdisconnectWebsocketsRoute",
+              "JOINUnderscoreDOCWebsocketsRoute",
+              "SENDUnderscoreOPWebsocketsRoute",
+              "SYNCUnderscoreSTATEWebsocketsRoute"
+            ],
+            "Properties": {
+              "ApiId": {
+                "Ref": "WebsocketsApi"
+              },
+              "Description": "Serverless Websockets"
+            }
+          },
+          "ConnectionsTable": {
+            "Type": "AWS::DynamoDB::Table",
+            "Properties": {
+              "TableName": "ConnectionsTable",
+              "AttributeDefinitions": [
+                {
+                  "AttributeName": "connectionId",
+                  "AttributeType": "S"
+                }
+              ],
+              "KeySchema": [
+                {
+                  "AttributeName": "connectionId",
+                  "KeyType": "HASH"
+                }
+              ],
+              "BillingMode": "PAY_PER_REQUEST"
+            }
+          },
+          "OperationsTable": {
+            "Type": "AWS::DynamoDB::Table",
+            "Properties": {
+              "TableName": "OperationsTable",
+              "AttributeDefinitions": [
+                {
+                  "AttributeName": "docId",
+                  "AttributeType": "S"
+                },
+                {
+                  "AttributeName": "syncIndex",
+                  "AttributeType": "N"
+                }
+              ],
+              "KeySchema": [
+                {
+                  "AttributeName": "docId",
+                  "KeyType": "HASH"
+                },
+                {
+                  "AttributeName": "syncIndex",
+                  "KeyType": "RANGE"
+                }
+              ],
+              "BillingMode": "PAY_PER_REQUEST",
+              "TimeToLiveSpecification": {
+                "AttributeName": "ttl",
+                "Enabled": true
+              }
+            }
+          },
+          "SnapshotBucket": {
+            "Type": "AWS::S3::Bucket",
+            "Properties": {
+              "BucketName": "collab-engine-snapshots-dev"
+            }
+          }
+        },
+        "Outputs": {
+          "ServerlessDeploymentBucketName": {
+            "Value": "serverless-framework-deployments-ap-south-1-46955e6c-d03f",
+            "Export": {
+              "Name": "sls-collab-engine-dev-ServerlessDeploymentBucketName"
+            }
+          },
+          "WebsocketHandlerLambdaFunctionQualifiedArn": {
+            "Description": "Current Lambda function version",
+            "Value": {
+              "Ref": "WebsocketHandlerLambdaVersionOjLymEZ4Adlyph35WSLFIYIuIplN0jnmLQJ2gG9DA"
+            },
+            "Export": {
+              "Name": "sls-collab-engine-dev-WebsocketHandlerLambdaFunctionQualifiedArn"
+            }
+          },
+          "ServiceEndpointWebsocket": {
+            "Description": "URL of the service endpoint",
+            "Value": {
+              "Fn::Join": [
+                "",
+                [
+                  "wss://",
+                  {
+                    "Ref": "WebsocketsApi"
+                  },
+                  ".execute-api.",
+                  {
+                    "Ref": "AWS::Region"
+                  },
+                  ".",
+                  {
+                    "Ref": "AWS::URLSuffix"
+                  },
+                  "/dev"
+                ]
+              ]
+            },
+            "Export": {
+              "Name": "sls-collab-engine-dev-ServiceEndpointWebsocket"
+            }
+          }
+        }
+      },
+      "vpc": {}
+    },
+    "dashboard": {
+      "isEnabledForService": false,
+      "requiredAuthentication": false,
+      "orgFeaturesInUse": null,
+      "orgObservabilityIntegrations": null,
+      "serviceAppId": null,
+      "serviceProvider": null,
+      "instanceParameters": null
+    },
+    "serviceRawFile": "service: collab-engine\r\n\r\nprovider:\r\n  name: aws\r\n  runtime: nodejs18.x\r\n  region: ap-south-1\r\n  stage: dev\r\n  websocketsApiRouteSelectionExpression: $request.body.action\r\n  environment:\r\n    REDIS_URL: rediss://default:AeI0AAIncDI5MzMwMjQ5YzdmZGI0YmFlYTk0YWY3Y2FiOGQwMDk2ZHAyNTc5MDg@large-teal-57908.upstash.io:6379\r\n    CONNECTIONS_TABLE: ConnectionsTable\r\n    OPERATIONS_TABLE: OperationsTable\r\n    WS_ENDPOINT:\r\n      Fn::Join:\r\n        - \"\"\r\n        - - \"https://\"\r\n          - Ref: WebsocketsApi\r\n          - \".execute-api.\"\r\n          - ${self:provider.region}\r\n          - \".amazonaws.com/${self:provider.stage}\"\r\n    SNAPSHOT_BUCKET:\r\n      Ref: SnapshotBucket\r\n\r\n\r\n  iam:\r\n    role:\r\n      statements:\r\n        - Effect: Allow\r\n          Action:\r\n            - dynamodb:PutItem\r\n            - dynamodb:DeleteItem\r\n            - dynamodb:Query\r\n          Resource: \"*\"\r\n        - Effect: Allow\r\n          Action:\r\n            - execute-api:ManageConnections\r\n          Resource: \"*\"\r\n        - Effect: Allow\r\n          Action:\r\n            - s3:PutObject\r\n            - s3:GetObject\r\n          Resource:\r\n            - Fn::Join:\r\n                - \"\"\r\n                - - \"arn:aws:s3:::\"\r\n                  - Ref: SnapshotBucket\r\n                  - \"/*\"\r\n\r\n\r\nfunctions:\r\n  websocketHandler:\r\n    handler: handler.main\r\n    events:\r\n      - websocket:\r\n          route: $connect\r\n      - websocket:\r\n          route: $disconnect\r\n      - websocket:\r\n          route: JOIN_DOC\r\n      - websocket:\r\n          route: SEND_OP\r\n      - websocket:\r\n          route: SYNC_STATE\r\n \r\n\r\n\r\nresources:\r\n  Resources:\r\n  \r\n    ConnectionsTable:\r\n      Type: AWS::DynamoDB::Table\r\n      Properties:\r\n        TableName: ConnectionsTable\r\n        AttributeDefinitions:\r\n          - AttributeName: connectionId\r\n            AttributeType: S\r\n        KeySchema:\r\n          - AttributeName: connectionId\r\n            KeyType: HASH\r\n        BillingMode: PAY_PER_REQUEST\r\n\r\n    OperationsTable:\r\n      Type: AWS::DynamoDB::Table\r\n      Properties:\r\n        TableName: OperationsTable\r\n        AttributeDefinitions:\r\n          - AttributeName: docId\r\n            AttributeType: S\r\n          - AttributeName: syncIndex\r\n            AttributeType: N\r\n        KeySchema:\r\n          - AttributeName: docId\r\n            KeyType: HASH\r\n          - AttributeName: syncIndex\r\n            KeyType: RANGE\r\n        BillingMode: PAY_PER_REQUEST  \r\n        TimeToLiveSpecification:\r\n          AttributeName: ttl\r\n          Enabled: true\r\n\r\n    SnapshotBucket:\r\n      Type: AWS::S3::Bucket\r\n      Properties:\r\n        BucketName: collab-engine-snapshots-${self:provider.stage}\r\n",
+    "command": [
+      "deploy"
+    ],
+    "options": {},
+    "orgId": "ffe4a1d7-9ed5-4c4c-8aed-1726299b0642",
+    "orgName": "iiitnayaraipur",
+    "userId": "lZw7f5BgzFDC5LpHsy",
+    "userName": "iiitnayaraipur",
+    "serviceProviderAwsAccountId": "351618342448",
+    "serviceProviderAwsCfStackName": "collab-engine-dev",
+    "serviceProviderAwsCfStackId": "arn:aws:cloudformation:ap-south-1:351618342448:stack/collab-engine-dev/fc221320-0d12-11f1-8ce3-02667b4dfd0f",
+    "serviceProviderAwsCfStackCreated": "2026-02-18T21:44:21.666Z",
+    "serviceProviderAwsCfStackUpdated": "2026-02-18T22:05:09.224Z",
+    "serviceProviderAwsCfStackStatus": "UPDATE_COMPLETE",
+    "serviceProviderAwsCfStackOutputs": [
+      {
+        "OutputKey": "WebsocketHandlerLambdaFunctionQualifiedArn",
+        "OutputValue": "arn:aws:lambda:ap-south-1:351618342448:function:collab-engine-dev-websocketHandler:50",
+        "Description": "Current Lambda function version",
+        "ExportName": "sls-collab-engine-dev-WebsocketHandlerLambdaFunctionQualifiedArn"
+      },
+      {
+        "OutputKey": "ServiceEndpointWebsocket",
+        "OutputValue": "wss://6njzkg9tne.execute-api.ap-south-1.amazonaws.com/dev",
+        "Description": "URL of the service endpoint",
+        "ExportName": "sls-collab-engine-dev-ServiceEndpointWebsocket"
+      },
+      {
+        "OutputKey": "ServerlessDeploymentBucketName",
+        "OutputValue": "serverless-framework-deployments-ap-south-1-46955e6c-d03f",
+        "ExportName": "sls-collab-engine-dev-ServerlessDeploymentBucketName"
+      }
+    ],
+    "compiledCloudFormationTemplate": {
+      "AWSTemplateFormatVersion": "2010-09-09",
+      "Description": "The AWS CloudFormation template for this Serverless application",
+      "Resources": {
+        "WebsocketHandlerLogGroup": {
+          "Type": "AWS::Logs::LogGroup",
+          "Properties": {
+            "LogGroupName": "/aws/lambda/collab-engine-dev-websocketHandler"
+          }
+        },
+        "IamRoleLambdaExecution": {
+          "Type": "AWS::IAM::Role",
+          "Properties": {
+            "AssumeRolePolicyDocument": {
+              "Version": "2012-10-17",
+              "Statement": [
+                {
+                  "Effect": "Allow",
+                  "Principal": {
+                    "Service": [
+                      "lambda.amazonaws.com"
+                    ]
+                  },
+                  "Action": [
+                    "sts:AssumeRole"
+                  ]
+                }
+              ]
+            },
+            "Policies": [
+              {
+                "PolicyName": {
+                  "Fn::Join": [
+                    "-",
+                    [
+                      "collab-engine",
+                      "dev",
+                      "lambda"
+                    ]
+                  ]
+                },
+                "PolicyDocument": {
+                  "Version": "2012-10-17",
+                  "Statement": [
+                    {
+                      "Effect": "Allow",
+                      "Action": [
+                        "logs:CreateLogStream",
+                        "logs:CreateLogGroup",
+                        "logs:TagResource"
+                      ],
+                      "Resource": [
+                        {
+                          "Fn::Sub": "arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/collab-engine-dev*:*"
+                        }
+                      ]
+                    },
+                    {
+                      "Effect": "Allow",
+                      "Action": [
+                        "logs:PutLogEvents"
+                      ],
+                      "Resource": [
+                        {
+                          "Fn::Sub": "arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/collab-engine-dev*:*:*"
+                        }
+                      ]
+                    },
+                    {
+                      "Effect": "Allow",
+                      "Action": [
+                        "dynamodb:PutItem",
+                        "dynamodb:DeleteItem",
+                        "dynamodb:Query"
+                      ],
+                      "Resource": "*"
+                    },
+                    {
+                      "Effect": "Allow",
+                      "Action": [
+                        "execute-api:ManageConnections"
+                      ],
+                      "Resource": "*"
+                    },
+                    {
+                      "Effect": "Allow",
+                      "Action": [
+                        "s3:PutObject",
+                        "s3:GetObject"
+                      ],
+                      "Resource": [
+                        {
+                          "Fn::Join": [
+                            "",
+                            [
+                              "arn:aws:s3:::",
+                              {
+                                "Ref": "SnapshotBucket"
+                              },
+                              "/*"
+                            ]
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "Effect": "Allow",
+                      "Action": [
+                        "execute-api:ManageConnections"
+                      ],
+                      "Resource": [
+                        {
+                          "Fn::Sub": "arn:${AWS::Partition}:execute-api:*:*:*/@connections/*"
+                        }
+                      ]
+                    }
+                  ]
+                }
+              }
+            ],
+            "Path": "/",
+            "RoleName": {
+              "Fn::Join": [
+                "-",
+                [
+                  "collab-engine",
+                  "dev",
+                  {
+                    "Ref": "AWS::Region"
+                  },
+                  "lambdaRole"
+                ]
+              ]
+            }
+          }
+        },
+        "WebsocketHandlerLambdaFunction": {
+          "Type": "AWS::Lambda::Function",
+          "Properties": {
+            "Code": {
+              "S3Bucket": "serverless-framework-deployments-ap-south-1-46955e6c-d03f",
+              "S3Key": "serverless/collab-engine/dev/1771452417441-2026-02-18T22:06:57.441Z/collab-engine.zip"
+            },
+            "Handler": "handler.main",
+            "Runtime": "nodejs18.x",
+            "FunctionName": "collab-engine-dev-websocketHandler",
+            "MemorySize": 1024,
+            "Timeout": 6,
+            "Environment": {
+              "Variables": {
+                "REDIS_URL": "rediss://default:AeI0AAIncDI5MzMwMjQ5YzdmZGI0YmFlYTk0YWY3Y2FiOGQwMDk2ZHAyNTc5MDg@large-teal-57908.upstash.io:6379",
+                "CONNECTIONS_TABLE": "ConnectionsTable",
+                "OPERATIONS_TABLE": "OperationsTable",
+                "WS_ENDPOINT": {
+                  "Fn::Join": [
+                    "",
+                    [
+                      "https://",
+                      {
+                        "Ref": "WebsocketsApi"
+                      },
+                      ".execute-api.",
+                      "ap-south-1",
+                      ".amazonaws.com/dev"
+                    ]
+                  ]
+                },
+                "SNAPSHOT_BUCKET": {
+                  "Ref": "SnapshotBucket"
+                }
+              }
+            },
+            "Role": {
+              "Fn::GetAtt": [
+                "IamRoleLambdaExecution",
+                "Arn"
+              ]
+            }
+          },
+          "DependsOn": [
+            "WebsocketHandlerLogGroup"
+          ]
+        },
+        "WebsocketHandlerLambdaVersionOjLymEZ4Adlyph35WSLFIYIuIplN0jnmLQJ2gG9DA": {
+          "Type": "AWS::Lambda::Version",
+          "DeletionPolicy": "Retain",
+          "Properties": {
+            "FunctionName": {
+              "Ref": "WebsocketHandlerLambdaFunction"
+            },
+            "CodeSha256": "3W0Wynvltafg7qt/76+qTar1eQJ1k64besq8Cbu9mTY="
+          }
+        },
+        "WebsocketsApi": {
+          "Type": "AWS::ApiGatewayV2::Api",
+          "Properties": {
+            "Name": "dev-collab-engine-websockets",
+            "RouteSelectionExpression": "$request.body.action",
+            "Description": "Serverless Websockets",
+            "ProtocolType": "WEBSOCKET"
+          }
+        },
+        "WebsocketHandlerWebsocketsIntegration": {
+          "Type": "AWS::ApiGatewayV2::Integration",
+          "Properties": {
+            "ApiId": {
+              "Ref": "WebsocketsApi"
+            },
+            "IntegrationType": "AWS_PROXY",
+            "IntegrationUri": {
+              "Fn::Join": [
+                "",
+                [
+                  "arn:",
+                  {
+                    "Ref": "AWS::Partition"
+                  },
+                  ":apigateway:",
+                  {
+                    "Ref": "AWS::Region"
+                  },
+                  ":lambda:path/2015-03-31/functions/",
+                  {
+                    "Fn::GetAtt": [
+                      "WebsocketHandlerLambdaFunction",
+                      "Arn"
+                    ]
+                  },
+                  "/invocations"
+                ]
+              ]
+            }
+          }
+        },
+        "WebsocketHandlerLambdaPermissionWebsockets": {
+          "Type": "AWS::Lambda::Permission",
+          "DependsOn": [
+            "WebsocketsApi",
+            "WebsocketHandlerLambdaFunction"
+          ],
+          "Properties": {
+            "FunctionName": {
+              "Fn::GetAtt": [
+                "WebsocketHandlerLambdaFunction",
+                "Arn"
+              ]
+            },
+            "Action": "lambda:InvokeFunction",
+            "Principal": "apigateway.amazonaws.com"
+          }
+        },
+        "SconnectWebsocketsRoute": {
+          "Type": "AWS::ApiGatewayV2::Route",
+          "Properties": {
+            "ApiId": {
+              "Ref": "WebsocketsApi"
+            },
+            "RouteKey": "$connect",
+            "AuthorizationType": "NONE",
+            "Target": {
+              "Fn::Join": [
+                "/",
+                [
+                  "integrations",
+                  {
+                    "Ref": "WebsocketHandlerWebsocketsIntegration"
+                  }
+                ]
+              ]
+            }
+          }
+        },
+        "SdisconnectWebsocketsRoute": {
+          "Type": "AWS::ApiGatewayV2::Route",
+          "Properties": {
+            "ApiId": {
+              "Ref": "WebsocketsApi"
+            },
+            "RouteKey": "$disconnect",
+            "AuthorizationType": "NONE",
+            "Target": {
+              "Fn::Join": [
+                "/",
+                [
+                  "integrations",
+                  {
+                    "Ref": "WebsocketHandlerWebsocketsIntegration"
+                  }
+                ]
+              ]
+            }
+          }
+        },
+        "JOINUnderscoreDOCWebsocketsRoute": {
+          "Type": "AWS::ApiGatewayV2::Route",
+          "Properties": {
+            "ApiId": {
+              "Ref": "WebsocketsApi"
+            },
+            "RouteKey": "JOIN_DOC",
+            "AuthorizationType": "NONE",
+            "Target": {
+              "Fn::Join": [
+                "/",
+                [
+                  "integrations",
+                  {
+                    "Ref": "WebsocketHandlerWebsocketsIntegration"
+                  }
+                ]
+              ]
+            }
+          }
+        },
+        "SENDUnderscoreOPWebsocketsRoute": {
+          "Type": "AWS::ApiGatewayV2::Route",
+          "Properties": {
+            "ApiId": {
+              "Ref": "WebsocketsApi"
+            },
+            "RouteKey": "SEND_OP",
+            "AuthorizationType": "NONE",
+            "Target": {
+              "Fn::Join": [
+                "/",
+                [
+                  "integrations",
+                  {
+                    "Ref": "WebsocketHandlerWebsocketsIntegration"
+                  }
+                ]
+              ]
+            }
+          }
+        },
+        "SYNCUnderscoreSTATEWebsocketsRoute": {
+          "Type": "AWS::ApiGatewayV2::Route",
+          "Properties": {
+            "ApiId": {
+              "Ref": "WebsocketsApi"
+            },
+            "RouteKey": "SYNC_STATE",
+            "AuthorizationType": "NONE",
+            "Target": {
+              "Fn::Join": [
+                "/",
+                [
+                  "integrations",
+                  {
+                    "Ref": "WebsocketHandlerWebsocketsIntegration"
+                  }
+                ]
+              ]
+            }
+          }
+        },
+        "WebsocketsDeploymentStage": {
+          "Type": "AWS::ApiGatewayV2::Stage",
+          "Properties": {
+            "ApiId": {
+              "Ref": "WebsocketsApi"
+            },
+            "StageName": "dev",
+            "Description": "Serverless Websockets",
+            "DeploymentId": {
+              "Ref": "WebsocketsDeploymentatnctbulJHIySAfRL4Joi6PJJiw4bfWUyoGOFTzt8"
+            }
+          }
+        },
+        "WebsocketsDeploymentatnctbulJHIySAfRL4Joi6PJJiw4bfWUyoGOFTzt8": {
+          "Type": "AWS::ApiGatewayV2::Deployment",
+          "DependsOn": [
+            "SconnectWebsocketsRoute",
+            "SdisconnectWebsocketsRoute",
+            "JOINUnderscoreDOCWebsocketsRoute",
+            "SENDUnderscoreOPWebsocketsRoute",
+            "SYNCUnderscoreSTATEWebsocketsRoute"
+          ],
+          "Properties": {
+            "ApiId": {
+              "Ref": "WebsocketsApi"
+            },
+            "Description": "Serverless Websockets"
+          }
+        },
+        "ConnectionsTable": {
+          "Type": "AWS::DynamoDB::Table",
+          "Properties": {
+            "TableName": "ConnectionsTable",
+            "AttributeDefinitions": [
+              {
+                "AttributeName": "connectionId",
+                "AttributeType": "S"
+              }
+            ],
+            "KeySchema": [
+              {
+                "AttributeName": "connectionId",
+                "KeyType": "HASH"
+              }
+            ],
+            "BillingMode": "PAY_PER_REQUEST"
+          }
+        },
+        "OperationsTable": {
+          "Type": "AWS::DynamoDB::Table",
+          "Properties": {
+            "TableName": "OperationsTable",
+            "AttributeDefinitions": [
+              {
+                "AttributeName": "docId",
+                "AttributeType": "S"
+              },
+              {
+                "AttributeName": "syncIndex",
+                "AttributeType": "N"
+              }
+            ],
+            "KeySchema": [
+              {
+                "AttributeName": "docId",
+                "KeyType": "HASH"
+              },
+              {
+                "AttributeName": "syncIndex",
+                "KeyType": "RANGE"
+              }
+            ],
+            "BillingMode": "PAY_PER_REQUEST",
+            "TimeToLiveSpecification": {
+              "AttributeName": "ttl",
+              "Enabled": true
+            }
+          }
+        },
+        "SnapshotBucket": {
+          "Type": "AWS::S3::Bucket",
+          "Properties": {
+            "BucketName": "collab-engine-snapshots-dev"
+          }
+        }
+      },
+      "Outputs": {
+        "ServerlessDeploymentBucketName": {
+          "Value": "serverless-framework-deployments-ap-south-1-46955e6c-d03f",
+          "Export": {
+            "Name": "sls-collab-engine-dev-ServerlessDeploymentBucketName"
+          }
+        },
+        "WebsocketHandlerLambdaFunctionQualifiedArn": {
+          "Description": "Current Lambda function version",
+          "Value": {
+            "Ref": "WebsocketHandlerLambdaVersionOjLymEZ4Adlyph35WSLFIYIuIplN0jnmLQJ2gG9DA"
+          },
+          "Export": {
+            "Name": "sls-collab-engine-dev-WebsocketHandlerLambdaFunctionQualifiedArn"
+          }
+        },
+        "ServiceEndpointWebsocket": {
+          "Description": "URL of the service endpoint",
+          "Value": {
+            "Fn::Join": [
+              "",
+              [
+                "wss://",
+                {
+                  "Ref": "WebsocketsApi"
+                },
+                ".execute-api.",
+                {
+                  "Ref": "AWS::Region"
+                },
+                ".",
+                {
+                  "Ref": "AWS::URLSuffix"
+                },
+                "/dev"
+              ]
+            ]
+          },
+          "Export": {
+            "Name": "sls-collab-engine-dev-ServiceEndpointWebsocket"
+          }
+        }
+      }
+    }
+  }
+}

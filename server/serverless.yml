@@ -1,0 +1,104 @@
+service: collab-engine
+
+provider:
+  name: aws
+  runtime: nodejs18.x
+  region: ap-south-1
+  stage: dev
+  websocketsApiRouteSelectionExpression: $request.body.action
+  environment:
+    REDIS_URL: rediss://default:AeI0AAIncDI5MzMwMjQ5YzdmZGI0YmFlYTk0YWY3Y2FiOGQwMDk2ZHAyNTc5MDg@large-teal-57908.upstash.io:6379
+    CONNECTIONS_TABLE: ConnectionsTable
+    OPERATIONS_TABLE: OperationsTable
+    WS_ENDPOINT:
+      Fn::Join:
+        - ""
+        - - "https://"
+          - Ref: WebsocketsApi
+          - ".execute-api."
+          - ${self:provider.region}
+          - ".amazonaws.com/${self:provider.stage}"
+    SNAPSHOT_BUCKET:
+      Ref: SnapshotBucket
+
+
+  iam:
+    role:
+      statements:
+        - Effect: Allow
+          Action:
+            - dynamodb:PutItem
+            - dynamodb:DeleteItem
+            - dynamodb:Query
+          Resource: "*"
+        - Effect: Allow
+          Action:
+            - execute-api:ManageConnections
+          Resource: "*"
+        - Effect: Allow
+          Action:
+            - s3:PutObject
+            - s3:GetObject
+          Resource:
+            - Fn::Join:
+                - ""
+                - - "arn:aws:s3:::"
+                  - Ref: SnapshotBucket
+                  - "/*"
+
+
+functions:
+  websocketHandler:
+    handler: handler.main
+    events:
+      - websocket:
+          route: $connect
+      - websocket:
+          route: $disconnect
+      - websocket:
+          route: JOIN_DOC
+      - websocket:
+          route: SEND_OP
+      - websocket:
+          route: SYNC_STATE
+ 
+
+
+resources:
+  Resources:
+  
+    ConnectionsTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: ConnectionsTable
+        AttributeDefinitions:
+          - AttributeName: connectionId
+            AttributeType: S
+        KeySchema:
+          - AttributeName: connectionId
+            KeyType: HASH
+        BillingMode: PAY_PER_REQUEST
+
+    OperationsTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: OperationsTable
+        AttributeDefinitions:
+          - AttributeName: docId
+            AttributeType: S
+          - AttributeName: syncIndex
+            AttributeType: N
+        KeySchema:
+          - AttributeName: docId
+            KeyType: HASH
+          - AttributeName: syncIndex
+            KeyType: RANGE
+        BillingMode: PAY_PER_REQUEST  
+        TimeToLiveSpecification:
+          AttributeName: ttl
+          Enabled: true
+
+    SnapshotBucket:
+      Type: AWS::S3::Bucket
+      Properties:
+        BucketName: collab-engine-snapshots-${self:provider.stage}
