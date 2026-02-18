@@ -1,6 +1,6 @@
 # 🚀 Real-Time Collaborative Editing Engine (AWS-Native)
 
-A cloud-native, distributed real-time collaborative text editing system built using AWS WebSocket API, Lambda, DynamoDB, Redis, S3, and a custom Conflict-Free Replicated Data Type (CRDT) implementation.
+A cloud-native, distributed real-time collaborative text editing system built using AWS WebSocket API, Lambda, DynamoDB, Upstash Redis, S3, and a custom Conflict-Free Replicated Data Type (CRDT) implementation.
 
 This system enables multiple users to edit the same document simultaneously with strong convergence guarantees, low latency, and fault tolerance — without using locks or centralized coordination.
 
@@ -30,7 +30,7 @@ API Gateway (WebSocket)
     ↓
 AWS Lambda (Routing + CRDT Engine)
     ↓
-Redis (Live Document State)
+Upstash Redis (Live Document State)
     ↓
 DynamoDB (Operation Log)
     ↓
@@ -49,10 +49,10 @@ S3 (Periodic Snapshots)
 - Applies CRDT logic  
 - Maintains stateless execution  
 
-**Redis (ElastiCache)**  
+**Upstash Redis**  
 - Stores active document state  
 - Maintains connection-to-document mappings  
-- Enables low-latency reads and updates  
+- Serverless Redis with global low-latency access 
 
 **DynamoDB**  
 - Stores immutable operation logs  
