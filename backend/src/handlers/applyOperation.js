@@ -7,8 +7,6 @@ import redis from "../config/redis.js";
 
 const SNAPSHOT_INTERVAL = 100;
 
-
-
 export const applyOperation = async (event, body) => {
 
     const { docId, op} = body;
@@ -19,7 +17,7 @@ export const applyOperation = async (event, body) => {
     if (!meta || meta.docId !== docId) {
         return { statusCode: 403 };
     }
-
+    
     const stored = await getDocState(docId);
     const crdt = new CRDTDocument();
     const connections = await redis.smembers(`doc:${docId}:connections`);
