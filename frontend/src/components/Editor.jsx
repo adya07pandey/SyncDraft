@@ -10,7 +10,7 @@ export default function Editor() {
     const crdtRef = useRef(new CRDTDocument());
     const [text, setText] = useState("");
     const { docId } = useParams();
-    const userId = "user - " + Math.floor(Math.random() * 1000);
+    const userId = useRef(crypto.randomUUID()).current;
     const navigate = useNavigate();
     const [showToast, setShowToast] = useState(false);
     const lastSeenSyncIndex = useRef(null);
@@ -20,9 +20,8 @@ export default function Editor() {
         navigate(`/doc/${newDocId}`);
     };
 
-
-
     useEffect(() => {
+
         crdtRef.current = new CRDTDocument();
         lastSeenSyncIndex.current = 0;
         setText("");
@@ -44,6 +43,7 @@ export default function Editor() {
 
             }
         );
+
     }, [docId]);
 
 
@@ -56,12 +56,19 @@ export default function Editor() {
             crdtRef.current.nodes = new Map(state.nodes);
             crdtRef.current.head = state.head;
             lastSeenSyncIndex.current = syncIndex;
-            setText(crdtRef.current.toString());
+            requestAnimationFrame(() => {
+                setText(crdtRef.current.toString());
+            });
         }
 
 
         if (data.action === "REMOTE_OP") {
+            console.log(data);
             const { op, syncIndex } = data;
+
+            const latency = performance.now() - op.sentAt;
+            console.log("Latency:", latency);
+
             if (op.type === "insert") {
                 crdtRef.current.insert(op);
             }
@@ -70,7 +77,9 @@ export default function Editor() {
             }
             lastSeenSyncIndex.current = syncIndex;
 
-            setText(crdtRef.current.toString());
+            requestAnimationFrame(() => {
+                setText(crdtRef.current.toString());
+            });
         }
 
         if (data.action === "SNAPSHOT_SYNC") {
@@ -89,7 +98,9 @@ export default function Editor() {
                 lastSeenSyncIndex.current = syncIndex;
             }
 
-            setText(crdtRef.current.toString());
+            requestAnimationFrame(() => {
+                setText(crdtRef.current.toString());
+            });
         }
 
 
@@ -106,7 +117,9 @@ export default function Editor() {
                 lastSeenSyncIndex.current = syncIndex;
             }
 
-            setText(crdtRef.current.toString());
+            requestAnimationFrame(() => {
+                setText(crdtRef.current.toString());
+            });
         }
 
 
@@ -133,7 +146,7 @@ export default function Editor() {
 
     const handleChange = (e) => {
         const newText = e.target.value;
-        const oldText = text;
+        const oldText = crdtRef.current.toString();
 
         const start = e.target.selectionStart;
 
@@ -170,12 +183,12 @@ export default function Editor() {
             insertAtIndex(diffStart + i, insertedText[i]);
         }
 
-        setText(crdtRef.current.toString());
+        setText(newText);
     }
 
     const insertAtIndex = (index, char) => {
         console.log(char);
-        const id = `${userId}-${Date.now()}-${Math.random()}`;
+        const id = `${userId}-${Date.now()}-${performance.now()}-${crypto.randomUUID()}`;
 
         const leftNode = getNodeAtIndex(index);
 
@@ -184,6 +197,7 @@ export default function Editor() {
             type: "insert",
             char,
             left: leftNode ? leftNode.id : null,
+            sentAt: performance.now(),
         };
         crdtRef.current.insert(op);
         sendMessage({
@@ -203,7 +217,7 @@ export default function Editor() {
                 if (count === index) {
                     crdtRef.current.delete(node.id);
                     const op = {
-                        id: `${userId}-${Date.now()}-${Math.random()}`,
+                        id: `${userId}-${Date.now()}-${performance.now()}-${crypto.randomUUID()}`,
                         type: "delete",
                         targetId: node.id,
                     }
@@ -222,6 +236,7 @@ export default function Editor() {
     };
 
     return (
+
         <div className="box">
             <div className="navbar">
                 <div className="logo" onClick={() => navigate("/")}>
@@ -238,8 +253,8 @@ export default function Editor() {
                         }, 2000);
                     }}>Share</button>
                 </div>
-
             </div>
+
             <div className="doc">
 
                 <textarea
@@ -252,6 +267,7 @@ export default function Editor() {
                     }}
                 />
             </div>
+
             {showToast && (
                 <div className="toast">
                     Link copied to clipboard!

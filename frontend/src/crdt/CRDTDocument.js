@@ -8,27 +8,60 @@ export default class CRDTDocument {
 
         if (this.nodes.has(id)) return;
 
-        const node = { id, char, deleted: false, left, right: null };
+        const node = {
+            id,
+            char,
+            deleted: false,
+            left,
+            right: null
+        };
+
         this.nodes.set(id, node);
 
         if (!left) {
-            if (this.head) {
+
+            if (!this.head || id < this.head) {
                 node.right = this.head;
-                this.nodes.get(this.head).left = id;
+                this.head = id;
+                return;
             }
-            this.head = id;
+
+            let current = this.head;
+            let previous = null;
+
+            while (current && current < id) {
+                previous = current;
+                current = this.nodes.get(current).right;
+            }
+
+            node.right = current;
+            this.nodes.get(previous).right = id;
+
             return;
         }
 
         const leftNode = this.nodes.get(left);
+
         if (!leftNode) return;
 
-        node.right = leftNode.right;
-        leftNode.right = id;
+        let currentRight = leftNode.right;
+        let previous = leftNode;
 
-        if (node.right) {
-            this.nodes.get(node.right).left = id;
+        while (
+            currentRight &&
+            this.nodes.get(currentRight)?.left === left &&
+            currentRight < id
+        ) {
+            previous = this.nodes.get(currentRight);
+            currentRight = previous.right;
         }
+
+        node.right = currentRight;
+        previous.right = id;
+
+        // if (currentRight) {
+        //     this.nodes.get(currentRight).left = id;
+        // }
     }
 
     delete(targetId) {

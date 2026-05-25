@@ -22,7 +22,6 @@ export const connectSocket = (onMessage, onOpen) => {
   return socket;
 };
 
-
 export const sendMessage = (data) => {
     if(socket && socket.readyState === WebSocket.OPEN){
         socket.send(JSON.stringify(data));
