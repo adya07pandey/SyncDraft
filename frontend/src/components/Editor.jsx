@@ -66,7 +66,7 @@ export default function Editor() {
             console.log(data);
             const { op, syncIndex } = data;
 
-            const latency = performance.now() - op.sentAt;
+            const latency = Date.now() - op.sentAt;
             console.log("Latency:", latency);
 
             if (op.type === "insert") {
@@ -197,7 +197,7 @@ export default function Editor() {
             type: "insert",
             char,
             left: leftNode ? leftNode.id : null,
-            sentAt: performance.now(),
+            sentAt: Date.now(),
         };
         crdtRef.current.insert(op);
         sendMessage({
