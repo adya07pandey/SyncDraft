@@ -22,7 +22,7 @@ The system is designed to be:
 
 ## System Architecture
 
-![System Architecture](architecture.png)
+![System Architecture](System_Architecture.png)
 
 
 ### Component Responsibilities
