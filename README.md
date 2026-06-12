@@ -20,22 +20,9 @@ The system is designed to be:
 
 ---
 
-## Architecture
-```
-Client (React)
-    ↓
-WebSocket
-    ↓
-API Gateway (WebSocket)
-    ↓
-AWS Lambda (Routing + CRDT Engine)
-    ↓
-Upstash Redis (Live Document State)
-    ↓
-DynamoDB (Operation Log)
-    ↓
-S3 (Periodic Snapshots)
-```
+## System Architecture
+
+![System Architecture](architecture.png)
 
 
 ### Component Responsibilities
