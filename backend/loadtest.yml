@@ -1,0 +1,33 @@
+config:
+  target: "wss://6njzkg9tne.execute-api.ap-south-1.amazonaws.com/dev"
+  phases:
+    - duration: 60
+      arrivalRate: 50
+
+scenarios:
+  - engine: ws
+    flow:
+      - send: |
+          {
+            "action":"JOIN_DOC",
+            "docId":"load-test-doc",
+            "userId":"artillery-user"
+          }
+
+      - think: 1
+
+      - loop:
+          - send: |
+              {
+                "action":"SEND_OP",
+                "docId":"load-test-doc",
+                "op":{
+                  "id":"{{$randomString()}}",
+                  "type":"insert",
+                  "char":"A",
+                  "left":null,
+                  "sentAt":{{ $timestamp }}
+                }
+              }
+          - think: 0.1
+        count: 20

@@ -3,7 +3,7 @@ service: collab-engine
 provider:
   name: aws
   runtime: nodejs18.x
-  region: ap-south-1
+  region: ap-south-2
   stage: dev
   websocketsApiRouteSelectionExpression: $request.body.action
   environment:
@@ -101,4 +101,4 @@ resources:
     SnapshotBucket:
       Type: AWS::S3::Bucket
       Properties:
-        BucketName: collab-engine-snapshots-${self:provider.stage}
+        BucketName: collab-engine-snapshots-${self:provider.stage}-${aws:accountId}
