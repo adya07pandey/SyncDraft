@@ -23,7 +23,14 @@ export const applyOperation = async (event, body) => {
     const connections = await redis.smembers(`doc:${docId}:connections`);
    
 
-    if (!stored) return
+    if (!stored) {
+        return {
+            statusCode: 404,
+            body: JSON.stringify({
+                message: "Document not found"
+            })
+        };
+    }
 
     // console.log("Redis state:", stored);
     // console.log("Op saved:", op);

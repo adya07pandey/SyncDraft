@@ -1,13 +1,13 @@
 service: collab-engine
-
+useDotenv: true
 provider:
   name: aws
-  runtime: nodejs18.x
+  runtime: nodejs22.x
   region: ap-south-2
   stage: dev
   websocketsApiRouteSelectionExpression: $request.body.action
   environment:
-    REDIS_URL: ${env:REDIS_URL}
+    REDIS_URL: redis://default:gQAAAAAAAWObAAIgcDEzMDEzNWYzMDlmMDA0MTliYTUzYTQ2NjBjZGZkZWZjMg@enabling-walleye-91035.upstash.io:6379
     CONNECTIONS_TABLE: ConnectionsTable
     OPERATIONS_TABLE: OperationsTable
     WS_ENDPOINT:

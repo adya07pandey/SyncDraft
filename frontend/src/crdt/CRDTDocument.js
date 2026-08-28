@@ -1,82 +1,170 @@
+import VectorClock from "./VectorClock.js";
+
 export default class CRDTDocument {
+
     constructor() {
+
         this.nodes = new Map();
-        this.head = null;
+
+        this.head = "head";
+
+        this.nodes.set(this.head, {
+            id: this.head,
+            char: null,
+            deleted: false,
+            parent: null,
+            vectorClock: {},
+            left: null,
+            right: null
+        });
     }
 
-    insert({ id, char, left }) {
+    ensureHead() {
 
-        if (this.nodes.has(id)) return;
+        if (!this.nodes.has(this.head)) {
 
+            this.nodes.set(this.head, {
+                id: this.head,
+                char: null,
+                deleted: false,
+                parent: null,
+                vectorClock: {},
+                left: null,
+                right: null
+            });
+        }
+    }
+
+    
+    insert({ id, char, left, vectorClock }) {
+        if (this.nodes.has(id)) {
+            return;
+        }
+        // console.log("id- ", id);
+        // console.log("char- ", char);
+        // console.log("left- ", left);
+
+        this.ensureHead();
+
+        left = left || this.head;
+
+        const leftNode = this.nodes.get(left);
+
+        if (!leftNode) {
+            return;
+        }
+        // console.log("leftnode- ", leftNode);
         const node = {
             id,
             char,
             deleted: false,
-            left,
+
+            parent: left,
+
+            vectorClock,
+
+            left: null,
             right: null
         };
 
         this.nodes.set(id, node);
 
-        if (!left) {
-
-            if (!this.head || id < this.head) {
-                node.right = this.head;
-                this.head = id;
-                return;
-            }
-
-            let current = this.head;
-            let previous = null;
-
-            while (current && current < id) {
-                previous = current;
-                current = this.nodes.get(current).right;
-            }
-
-            node.right = current;
-            this.nodes.get(previous).right = id;
-
-            return;
-        }
-
-        const leftNode = this.nodes.get(left);
-
-        if (!leftNode) return;
-
-        let currentRight = leftNode.right;
+        let current = leftNode.right;
         let previous = leftNode;
+        // console.log("current - ", current);
+        // console.log("previous - ", previous);
+        while (current) {
 
-        while (
-            currentRight &&
-            this.nodes.get(currentRight)?.left === left &&
-            currentRight < id
-        ) {
-            previous = this.nodes.get(currentRight);
-            currentRight = previous.right;
+            const currentNode = this.nodes.get(current);
+            // console.log("currentnode - ", currentNode);
+            if (!currentNode) {
+                break;
+            }
+
+            
+            if (currentNode.parent !== left) {
+                break;
+            }
+
+            const relation = VectorClock.compare(
+                currentNode.vectorClock,
+                vectorClock
+            );
+            // console.log(relation)
+            
+            if (relation === "B_AFTER_A") {
+                break;
+            }
+
+            
+            if (relation === "CONCURRENT") {
+
+                if (currentNode.id > id) {
+                    break;
+                }
+            }
+
+            previous = currentNode;
+            current = currentNode.right;
         }
 
-        node.right = currentRight;
-        previous.right = id;
+        node.left = previous.id;
+        node.right = current;
 
-        // if (currentRight) {
-        //     this.nodes.get(currentRight).left = id;
-        // }
+        previous.right = node.id;
+        // console.log("previous- ", previous.char);
+
+        // const nextNode = previous.right
+        //     ? this.nodes.get(previous.right)
+        //     : null;
+
+        // console.log("current- ", nextNode?.char);
+        // console.log("current.right- ", nextNode?.right);
+
+        
+        if (current) {
+
+            const currentNode = this.nodes.get(current);
+
+            currentNode.left = node.id;
+        }
     }
 
     delete(targetId) {
+
+        if (targetId === this.head) {
+            return;
+        }
+
         const node = this.nodes.get(targetId);
-        if (node) node.deleted = true;
+
+        if (!node) {
+            return;
+        }
+
+        node.deleted = true;
     }
 
-
     toString() {
+
+        this.ensureHead();
+
         let result = "";
-        let current = this.head;
+
+        let current = this.nodes.get(this.head).right;
 
         while (current) {
+
             const node = this.nodes.get(current);
-            if (!node.deleted) result += node.char;
+
+            if (!node) {
+                break;
+            }
+
+            if (!node.deleted) {
+                result += node.char;
+            }
+
             current = node.right;
         }
 

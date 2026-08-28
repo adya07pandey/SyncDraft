@@ -4,7 +4,8 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
+    "test": "vitest",
+    "test:run": "vitest run",
     "run": "node src/index.js",
     "dev": "nodemon src/index.js"
   },
@@ -19,6 +20,10 @@
     "@aws-sdk/lib-dynamodb": "^3.990.0",
     "@react-oauth/google": "^0.13.4",
     "google-auth-library": "^10.5.0",
-    "ioredis": "^5.9.2"
+    "ioredis": "^5.9.2",
+    "ws": "^8.21.3"
+  },
+  "devDependencies": {
+    "vitest": "^4.1.11"
   }
 }

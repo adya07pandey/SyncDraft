@@ -17,3 +17,5 @@ export const main = async (event) => {
 };
 
 // serverless logs -f websocketHandler --tail
+// aws login --profile newaws
+// serverless deploy --aws-profile newaws

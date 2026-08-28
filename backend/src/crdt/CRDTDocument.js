@@ -1,28 +1,50 @@
+import VectorClock from "./VectorClock.js";
+
 export default class CRDTDocument {
+
     constructor() {
+
         this.nodes = new Map();
 
-        // Permanent sentinel node
         this.head = "head";
 
         this.nodes.set(this.head, {
             id: this.head,
             char: null,
             deleted: false,
+            parent: null,
+            vectorClock: {},
             left: null,
             right: null
         });
     }
 
-    insert({ id, char, left }) {
+    ensureHead() {
 
-        // Duplicate operation
-        if (this.nodes.has(id)) return;
+        if (!this.nodes.has(this.head)) {
 
-        // If no left is provided, insert after HEAD
+            this.nodes.set(this.head, {
+                id: this.head,
+                char: null,
+                deleted: false,
+                parent: null,
+                vectorClock: {},
+                left: null,
+                right: null
+            });
+        }
+    }
+
+    insert({ id, char, left, vectorClock }) {
+
+        if (this.nodes.has(id)) {
+            return;
+        }
+
+        this.ensureHead();
+
         left = left || this.head;
 
-        // Left dependency must exist
         const leftNode = this.nodes.get(left);
 
         if (!leftNode) {
@@ -33,18 +55,16 @@ export default class CRDTDocument {
             id,
             char,
             deleted: false,
+
+            parent: left,
+
+            vectorClock,
+
             left: null,
             right: null
         };
 
         this.nodes.set(id, node);
-
-        /*
-         * Find where this node belongs.
-         *
-         * All nodes inserted concurrently after the
-         * same left node are ordered by their id.
-         */
 
         let current = leftNode.right;
         let previous = leftNode;
@@ -53,31 +73,36 @@ export default class CRDTDocument {
 
             const currentNode = this.nodes.get(current);
 
-            if (!currentNode) break;
-
-            // Only compare direct concurrent siblings.
-            if (currentNode.left !== left) {
+            if (!currentNode) {
                 break;
             }
 
-            // Smaller ID comes first.
-            if (currentNode.id > id) {
+            
+            if (currentNode.parent !== left) {
                 break;
+            }
+
+            const relation = VectorClock.compare(
+                currentNode.vectorClock,
+                vectorClock
+            );
+
+            
+            if (relation === "B_AFTER_A") {
+                break;
+            }
+
+            
+            if (relation === "CONCURRENT") {
+
+                if (currentNode.id > id) {
+                    break;
+                }
             }
 
             previous = currentNode;
             current = currentNode.right;
         }
-
-        /*
-         * Insert:
-         *
-         * previous <-> current
-         *
-         * becomes:
-         *
-         * previous <-> node <-> current
-         */
 
         node.left = previous.id;
         node.right = current;
@@ -85,14 +110,15 @@ export default class CRDTDocument {
         previous.right = node.id;
 
         if (current) {
+
             const currentNode = this.nodes.get(current);
+
             currentNode.left = node.id;
         }
     }
 
     delete(targetId) {
 
-        // Never delete HEAD
         if (targetId === this.head) {
             return;
         }
@@ -103,20 +129,24 @@ export default class CRDTDocument {
             return;
         }
 
-        // Tombstone
         node.deleted = true;
     }
 
     toString() {
 
+        this.ensureHead();
+
         let result = "";
 
-        // Start after HEAD
         let current = this.nodes.get(this.head).right;
 
         while (current) {
 
             const node = this.nodes.get(current);
+
+            if (!node) {
+                break;
+            }
 
             if (!node.deleted) {
                 result += node.char;

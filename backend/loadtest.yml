@@ -1,5 +1,5 @@
 config:
-  target: "wss://6njzkg9tne.execute-api.ap-south-1.amazonaws.com/dev"
+  target: "wss://onxi7n4ag5.execute-api.ap-south-2.amazonaws.com/dev"
   phases:
     - duration: 60
       arrivalRate: 50

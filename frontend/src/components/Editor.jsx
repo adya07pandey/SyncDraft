@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import CRDTDocument from "../crdt/CRDTDocument";
 import { connectSocket, sendMessage } from "../websocket/socket";
 import { useParams, useNavigate } from "react-router-dom";
-
+import VectorClock from "../crdt/VectorClock.js";
 
 
 export default function Editor() {
@@ -15,14 +15,21 @@ export default function Editor() {
     const [showToast, setShowToast] = useState(false);
     const lastSeenSyncIndex = useRef(null);
 
+
     const createDoc = () => {
         const newDocId = crypto.randomUUID();
         navigate(`/doc/${newDocId}`);
     };
 
+    const vectorClockRef = useRef(
+        new VectorClock(userId)
+    );
+
     useEffect(() => {
 
+        vectorClockRef.current = new VectorClock(userId);
         crdtRef.current = new CRDTDocument();
+
         lastSeenSyncIndex.current = 0;
         setText("");
         connectSocket(
@@ -49,25 +56,30 @@ export default function Editor() {
 
 
     const handleServerMessage = (data) => {
-
+        
         if (data.action === "DOC_STATE") {
+
             const { state, syncIndex } = data;
 
             crdtRef.current.nodes = new Map(state.nodes);
-            crdtRef.current.head = state.head;
+            crdtRef.current.head = "head";
+            crdtRef.current.ensureHead();
+
             lastSeenSyncIndex.current = syncIndex;
+
             requestAnimationFrame(() => {
                 setText(crdtRef.current.toString());
             });
         }
 
-
         if (data.action === "REMOTE_OP") {
-            console.log(data);
             const { op, syncIndex } = data;
+            // console.log(op);
 
             const latency = Date.now() - op.sentAt;
-            console.log("Latency:", latency);
+            // console.log("Latency:", latency);
+
+            vectorClockRef.current.merge(op.vectorClock);
 
             if (op.type === "insert") {
                 crdtRef.current.insert(op);
@@ -83,18 +95,28 @@ export default function Editor() {
         }
 
         if (data.action === "SNAPSHOT_SYNC") {
+
             const { snapshot, ops, snapshotSyncIndex } = data;
-            lastSeenSyncIndex.current = snapshotSyncIndex;
+
             crdtRef.current.nodes = new Map(snapshot.nodes);
-            crdtRef.current.head = snapshot.head;
+            crdtRef.current.head = "head";
+            crdtRef.current.ensureHead();
+
+            lastSeenSyncIndex.current = snapshotSyncIndex;
 
             for (const item of ops) {
+
                 const { op, syncIndex } = item;
+
+                vectorClockRef.current.merge(op.vectorClock);
+
                 if (op.type === "insert") {
                     crdtRef.current.insert(op);
-                } else {
+                }
+                else {
                     crdtRef.current.delete(op.targetId);
                 }
+
                 lastSeenSyncIndex.current = syncIndex;
             }
 
@@ -103,14 +125,16 @@ export default function Editor() {
             });
         }
 
-
         if (data.action === "OP_REPLAY") {
             const { ops, syncIndex } = data;
 
             for (const op of ops) {
+                vectorClockRef.current.merge(op.vectorClock);
+
                 if (op.type === "insert") {
                     crdtRef.current.insert(op);
-                } else {
+                }
+                else {
                     crdtRef.current.delete(op.targetId);
                 }
 
@@ -125,29 +149,41 @@ export default function Editor() {
 
     }
     const getNodeAtIndex = (index) => {
-        let current = crdtRef.current.head;
+
+        let current = crdtRef.current.nodes.get(crdtRef.current.head).right;
+        let previous = crdtRef.current.nodes.get(crdtRef.current.head);
         let count = 0;
-        let previousVisible;
 
         while (current) {
+            // console.log(previous.char);
+
             const node = crdtRef.current.nodes.get(current);
+
+            if (!node) break;
+
             if (!node.deleted) {
-                if (count == index) {
-                    return previousVisible;
+
+                if (count === index) {
+                    return previous;
                 }
-                previousVisible = node;
+
+                previous = node;
                 count++;
             }
             current = node.right;
         }
-        return previousVisible;
-    }
+
+        return previous;
+    };
 
 
     const handleChange = (e) => {
+
         const newText = e.target.value;
         const oldText = crdtRef.current.toString();
-
+        // console.log("oldtext - ", oldText);
+        // console.log("newtext - ", newText);
+        
         const start = e.target.selectionStart;
 
         let diffStart = 0;
@@ -173,7 +209,7 @@ export default function Editor() {
 
         const deletedCount = oldEnd - diffStart + 1;
         const insertedText = newText.slice(diffStart, newEnd + 1);
-
+        // console.log("insertedText- ", newText.slice(diffStart, newEnd + 1));
 
         for (let i = 0; i < deletedCount; i++) {
             deleteAtIndex(diffStart);
@@ -184,50 +220,82 @@ export default function Editor() {
         }
 
         setText(newText);
+        // console.log("text- ",text);
     }
 
     const insertAtIndex = (index, char) => {
-        console.log(char);
-        const id = `${userId}-${Date.now()}-${performance.now()}-${crypto.randomUUID()}`;
+
+        const id =
+            `${userId}-${Date.now()}-${performance.now()}-${crypto.randomUUID()}`;
 
         const leftNode = getNodeAtIndex(index);
+
+        // console.log(
+        //     "insert:",
+        //     char,
+        //     "index:",
+        //     index,
+        //     "left:",
+        //     leftNode?.id
+        // );
+
+        vectorClockRef.current.increment();
 
         const op = {
             id,
             type: "insert",
             char,
-            left: leftNode ? leftNode.id : null,
+            left: leftNode ? leftNode.id : "head",
+
+            vectorClock: vectorClockRef.current.get(),
+
             sentAt: Date.now(),
         };
+        // console.log(op);
         crdtRef.current.insert(op);
+
         sendMessage({
             action: "SEND_OP",
             docId,
             op,
         });
     };
+
     const deleteAtIndex = (index) => {
-        let current = crdtRef.current.head;
+
+        let current = crdtRef.current.nodes.get(crdtRef.current.head).right;
         let count = 0;
 
         while (current) {
+
             const node = crdtRef.current.nodes.get(current);
 
+            if (!node) break;
+
             if (!node.deleted) {
+
                 if (count === index) {
+
                     crdtRef.current.delete(node.id);
+                    vectorClockRef.current.increment();
+
                     const op = {
                         id: `${userId}-${Date.now()}-${performance.now()}-${crypto.randomUUID()}`,
                         type: "delete",
                         targetId: node.id,
-                    }
+                        vectorClock: vectorClockRef.current.get(),
+                        sentAt: Date.now(),
+                    };
+                    
                     sendMessage({
                         action: "SEND_OP",
                         docId,
                         op,
                     });
-                    break;
+
+                    return;
                 }
+
                 count++;
             }
 

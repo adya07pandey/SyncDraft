@@ -18,7 +18,18 @@ export const connectSocket = (onMessage, onOpen) => {
   socket.onclose = () => {
     console.log("Disconnected");
   };
+  socket.onerror = (error) => {
+      console.error("WEBSOCKET ERROR:", error);
+  };
 
+  socket.onclose = (event) => {
+      console.log(
+          "Disconnected",
+          "code:", event.code,
+          "reason:", event.reason,
+          "wasClean:", event.wasClean
+      );
+  };
   return socket;
 };
 
