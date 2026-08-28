@@ -1,52 +1,49 @@
-# Real-Time Collaborative Editing Engine (AWS-Native)
+# 🚀 SyncDraft — Real-Time Collaborative Editor
 
-A cloud-native, distributed real-time collaborative text editing system built using **AWS WebSocket API, Lambda, DynamoDB, Upstash Redis, S3, and a custom CRDT implementation**.
+A real-time collaborative text editor that allows multiple users to edit the same document simultaneously using a custom **CRDT-based synchronization engine**.
 
-SyncDraft enables multiple users to edit the same document simultaneously while maintaining **deterministic conflict resolution and replica convergence** without locks or centralized coordination.
+Built with **React, AWS WebSocket API, Lambda, DynamoDB, Upstash Redis, and S3**.
 
----
-
-## Overview
-
-SyncDraft uses an **operation-based CRDT** to synchronize document changes between multiple users.
-
-Instead of sending the entire document after every edit, clients generate atomic operations such as inserts and deletes. These operations are distributed through AWS WebSockets and applied independently at each replica.
-
-The system is designed to provide:
-
-- Real-time multi-user collaboration
-- Deterministic conflict resolution
-- Replica convergence under concurrent edits
-- Eventually consistent synchronization
-- Stateless server-side compute
-- Durable operation persistence
-- Snapshot-based recovery
-- Horizontally scalable serverless infrastructure
-
----
-
-## System Architecture
+## Architecture
 
 ![System Architecture](System_Architecture.png)
 
-### Data Flow
+### How it works
 
-```text
-Client 1 ──┐
-Client 2 ──┤
-Client N ──┘
-      │
-      ▼
-AWS WebSocket API
-      │
-      ▼
-AWS Lambda CRDT Engine
-      │
-      ├──────────► Upstash Redis
-      │             Live document state
-      │
-      ├──────────► DynamoDB
-      │             Immutable operation log
-      │
-      └──────────► S3
-                    Document snapshots
+- **WebSocket API** maintains real-time client connections.
+- **AWS Lambda** processes document operations and runs the CRDT synchronization logic.
+- **Redis** maintains active document state and connection mappings.
+- **DynamoDB** stores the operation history for durable recovery.
+- **S3** stores document snapshots to reduce replay overhead.
+
+## Key Features
+
+- Real-time multi-user collaborative editing
+- CRDT-based conflict resolution without locks
+- Vector clocks for tracking operation ordering
+- Operation-based synchronization
+- Insert, delete, and concurrent editing support
+- Persistent operation history and snapshots
+- Serverless and horizontally scalable architecture
+
+## Performance
+
+Tested using automated CRDT and WebSocket workloads:
+
+- **52K+ CRDT operations/sec** across 50 replicas
+- **100% replica convergence** under mixed workloads
+- **0% packet loss** across 100 AWS WebSocket operations
+- **~159 ms average WebSocket latency**
+- **~171 ms p95 WebSocket latency**
+
+## Tech Stack
+
+**Frontend:** React  
+**Backend:** AWS Lambda, API Gateway WebSocket  
+**Storage:** DynamoDB, S3  
+**State:** Upstash Redis  
+**Synchronization:** Custom CRDT + Vector Clocks
+
+## Links
+
+[GitHub](https://github.com/adya07pandey/SyncDraft) | [Live Demo](https://sync-draft.vercel.app)
